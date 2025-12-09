@@ -1,35 +1,69 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { StatusBar } from 'expo-status-bar';
+import { useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { View } from 'react-native';
+import MainApp from '@/components/MainApp';
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+type AppState = 'splash' | 'onboarding' | 'login' | 'main';
+
+export default function RootLayout() {
+  const [appState, setAppState] = useState<AppState>('splash');
+
+  useEffect(() => {
+    checkAppState();
+  }, []);
+
+  const checkAppState = async () => {
+    try {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const onboarded = await AsyncStorage.getItem('hasCompletedOnboarding');
+      const isLoggedIn = await AsyncStorage.getItem('isLoggedIn');
+      
+      if (onboarded !== 'true') {
+        setAppState('onboarding');
+      } else if (isLoggedIn !== 'true') {
+        setAppState('login');
+      } else {
+        setAppState('main');
+      }
+    } catch (error) {
+      console.error('Error checking app state:', error);
+      setAppState('onboarding');
+    }
+  };
+
+  // Dynamically import components based on state
+  const renderContent = () => {
+    switch (appState) {
+      case 'splash':
+        const SplashScreen = require('@/components/SplashScreen').default;
+        return <SplashScreen />;
+      case 'onboarding':
+        const Onboarding = require('@/components/Onboarding').default;
+        return <Onboarding onComplete={() => {
+          AsyncStorage.setItem('hasCompletedOnboarding', 'true');
+          setAppState('login');
+        }} />;
+      case 'login':
+        const LoginScreen = require('@/components/LoginScreen').default;
+        return <LoginScreen onLogin={() => {
+          AsyncStorage.setItem('isLoggedIn', 'true');
+          setAppState('main');
+        }} />;
+      case 'main':
+        return <MainApp />;
+      default:
+        return null;
+    }
+  };
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
-        }}
-      />
-    </Tabs>
+    <View style={{ flex: 1 }}>
+      {renderContent()}
+      <StatusBar style="auto" />
+    </View>
   );
 }
+
