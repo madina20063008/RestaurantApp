@@ -1,13 +1,16 @@
-
+// app/_layout.tsx (ROOT LAYOUT - FIXED VERSION)
 import { StatusBar } from 'expo-status-bar';
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { View } from 'react-native';
-import MainApp from '@/components/MainApp';
+import { CartProvider } from '@/context/CartContext';
+import { LanguageProvider } from '@/context/LanguageContext';
+import { NavigationProvider } from '@/context/NavigationContext';
+import MainLayout from '../_layout';
 
 type AppState = 'splash' | 'onboarding' | 'login' | 'main';
 
-export default function RootLayout() {
+function AppContent() {
   const [appState, setAppState] = useState<AppState>('splash');
 
   useEffect(() => {
@@ -53,7 +56,7 @@ export default function RootLayout() {
           setAppState('main');
         }} />;
       case 'main':
-        return <MainApp />;
+        return <MainLayout />;
       default:
         return null;
     }
@@ -67,3 +70,15 @@ export default function RootLayout() {
   );
 }
 
+// THIS IS THE KEY: Wrap the entire AppContent with providers
+export default function App() {
+  return (
+    <LanguageProvider>
+      <NavigationProvider>
+        <CartProvider>
+          <AppContent />
+        </CartProvider>
+      </NavigationProvider>
+    </LanguageProvider>
+  );
+}
